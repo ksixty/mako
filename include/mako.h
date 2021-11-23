@@ -63,6 +63,7 @@ struct mako_state {
 	struct wl_cursor_theme *cursor_theme;
 	const struct wl_cursor_image *cursor_image;
 	struct wl_surface *cursor_surface;
+	int32_t cursor_scale;
 
 	struct wl_list surfaces; // mako_surface::link
 

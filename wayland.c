@@ -176,7 +176,8 @@ static void pointer_handle_enter(void *data, struct wl_pointer *wl_pointer,
 	// Change the mouse cursor to "left_ptr"
 	if (state->cursor_theme != NULL) {
 		wl_pointer_set_cursor(wl_pointer, serial, state->cursor_surface,
-			state->cursor_image->hotspot_x, state->cursor_image->hotspot_y);
+			state->cursor_image->hotspot_x / state->cursor_scale,
+			state->cursor_image->hotspot_y / state->cursor_scale);
 	}
 }
 
@@ -307,6 +308,7 @@ static const struct wl_surface_listener surface_listener = {
 
 static void schedule_frame_and_commit(struct mako_surface *state);
 static void send_frame(struct mako_surface *surface);
+void setup_cursor(struct mako_state *state, int scale);
 
 static void layer_surface_handle_configure(void *data,
 		struct zwlr_layer_surface_v1 *surface,
@@ -452,6 +454,10 @@ bool init_wayland(struct mako_state *state) {
 		}
 	}
 
+	return true;
+}
+
+void setup_cursor(struct mako_state *state, int scale) {
 	// Set up the cursor. It needs a wl_surface with the cursor loaded into it.
 	// If one of these fail, mako will work fine without the cursor being able to change.
 	const char *cursor_size_env = getenv("XCURSOR_SIZE");
@@ -467,10 +473,13 @@ bool init_wayland(struct mako_state *state) {
 		}
 	}
 	const char *xcursor_theme = getenv("XCURSOR_THEME");
-	state->cursor_theme = wl_cursor_theme_load(xcursor_theme, cursor_size, state->shm);
+	if (state->cursor_theme) {
+		wl_cursor_theme_destroy(state->cursor_theme);
+	}
+	state->cursor_theme = wl_cursor_theme_load(xcursor_theme, cursor_size * scale, state->shm);
 	if (state->cursor_theme == NULL) {
 		fprintf(stderr, "couldn't find a cursor theme\n");
-		return true;
+		return;
 	}
 	struct wl_cursor *cursor = wl_cursor_theme_get_cursor(state->cursor_theme, "left_ptr");
 	if (cursor == NULL) {
@@ -478,15 +487,15 @@ bool init_wayland(struct mako_state *state) {
 		wl_cursor_theme_destroy(state->cursor_theme);
 		// Set to NULL so it doesn't get free'd again
 		state->cursor_theme = NULL;
-		return true;
+		return;
 	}
 	state->cursor_image = cursor->images[0];
 	struct wl_buffer *cursor_buffer = wl_cursor_image_get_buffer(cursor->images[0]);
 	state->cursor_surface = wl_compositor_create_surface(state->compositor);
 	wl_surface_attach(state->cursor_surface, cursor_buffer, 0, 0);
+	wl_surface_set_buffer_scale(state->cursor_surface, scale);
 	wl_surface_commit(state->cursor_surface);
-
-	return true;
+	state->cursor_scale = scale;
 }
 
 void finish_wayland(struct mako_state *state) {
@@ -645,6 +654,9 @@ static void send_frame(struct mako_surface *surface) {
 		zwlr_layer_surface_v1_set_anchor(surface->layer_surface,
 				surface->anchor);
 		wl_surface_commit(surface->surface);
+		if (state->cursor_scale != scale) {
+			setup_cursor(state, scale);
+		}
 
 		// Now we're going to bail without drawing anything. This gives the
 		// compositor a chance to create the surface and tell us what size we
@@ -708,6 +720,15 @@ static void schedule_frame_and_commit(struct mako_surface *surface) {
 	surface->frame_callback = wl_surface_frame(surface->surface);
 	wl_callback_add_listener(surface->frame_callback, &frame_listener, surface);
 	wl_surface_commit(surface->surface);
+
+	struct mako_state *state = surface->state;
+	if (surface->surface_output != NULL) {
+		int scale = surface->surface_output->scale;
+		if (state->cursor_scale != scale) {
+			// output or output scale changed, update cursor
+			setup_cursor(state, scale);
+		}
+	}
 }
 
 void set_dirty(struct mako_surface *surface) {

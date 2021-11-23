@@ -33,7 +33,6 @@ struct mako_surface {
 	struct wl_callback *frame_callback;
 	bool configured;
 	bool dirty; // Do we need to redraw?
-	int32_t scale;
 
 	char *configured_output;
 	enum zwlr_layer_shell_v1_layer layer;

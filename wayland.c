@@ -306,7 +306,7 @@ static const struct wl_surface_listener surface_listener = {
 };
 
 
-static void schedule_frame_and_commit(struct mako_surface *state);
+static void schedule_frame_and_commit(struct mako_surface *surface);
 static void send_frame(struct mako_surface *surface);
 void setup_cursor(struct mako_state *state, int scale);
 
@@ -570,8 +570,6 @@ static struct mako_output *get_configured_output(struct mako_surface *surface) {
 
 	return NULL;
 }
-
-static void schedule_frame_and_commit(struct mako_surface *surface);
 
 // Draw and commit a new frame.
 static void send_frame(struct mako_surface *surface) {

@@ -70,6 +70,7 @@ static bool init(struct mako_state *state) {
 	wl_list_init(&state->notifications);
 	wl_list_init(&state->history);
 	state->current_mode = strdup("default");
+	state->last_scale = 1;
 	return true;
 }
 

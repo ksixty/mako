@@ -571,9 +571,10 @@ static void schedule_frame_and_commit(struct mako_surface *surface);
 static void send_frame(struct mako_surface *surface) {
 	struct mako_state *state = surface->state;
 
-	int scale = 1;
+	int scale = state->last_scale;
 	if (surface->surface_output != NULL) {
 		scale = surface->surface_output->scale;
+		state->last_scale = scale;
 	}
 
 	surface->current_buffer =

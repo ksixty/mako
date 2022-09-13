@@ -22,6 +22,7 @@ usage() {
 	echo "  list                           List notifications"
 	echo "  reload                         Reload the configuration file"
 	echo "  set-mode <name>                Switch the current mode"
+	echo "  get-mode                       Display the current mode"
 	echo "  help                           Show this help"
 }
 
@@ -132,6 +133,9 @@ case "$1" in
 	;;
 "set-mode")
 	call SetMode "s" "$2"
+    ;;
+"get-mode")
+	call GetMode
 	;;
 "help"|"--help"|"-h")
 	usage
